@@ -1,0 +1,831 @@
+/**************creating of schema *************************/
+create schema stg_zone
+
+/**************End creating of schema *************************/
+
+/**************creating of External stage *************************/
+CREATE STAGE my_s3_stage
+  STORAGE_INTEGRATION = s3_int
+  URL = 's3://ipl-data-analytics/'
+  FILE_FORMAT = mycsvformat;
+
+/**************End of creation of External stage *************************/
+
+/**************creating of File Format *************************/
+CREATE OR REPLACE FILE FORMAT mycsvformat
+   TYPE = 'CSV'
+   FIELD_DELIMITER = ','
+    record_delimiter = '\n'
+   SKIP_HEADER = 1
+   encoding = 'iso-8859-1'
+   null_if = ('NULL', 'null')
+  empty_field_as_null = true
+    FIELD_OPTIONALLY_ENCLOSED_BY = '0x22';
+
+/**************End creating of File Format *************************/
+
+/**************creating of Storage integration *************************/
+
+  CREATE or replace STORAGE INTEGRATION s3_int
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = 'S3'
+  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::095303341690:role/s3_access_snowflake'
+  ENABLED = TRUE
+  STORAGE_ALLOWED_LOCATIONS = ('s3://ipl-data-analytics/');
+  desc integration s3_int
+
+/**************End creating of Storage integration *************************/
+  
+/**********creation of source tables ***************************************/
+
+
+create table "Player" (
+PLAYER_SK integer,
+Player_Id integer,
+Player_Name varchar(30),
+DOB date,
+Batting_hand varchar(30),
+Bowling_skill varchar(40),
+Country_Name varchar(40) )
+
+create table "Player_match" (
+Player_match_SK	integer	,
+PlayerMatch_key	integer	,
+Match_Id	bigint	,
+Player_Id	integer	,
+Player_Name	varchar(30)	,
+DOB	date	,
+Batting_hand	varchar(40)	,
+Bowling_skill	varchar(40)	,
+Country_Name	varchar(40)	,
+Role_Desc	varchar(40)	,
+Player_team	varchar(40)	,
+Opposit_Team	varchar(40)	,
+Season_year	integer	,
+is_manofThematch	varchar(3)	,
+Age_As_on_match	integer	,
+IsPlayers_Team_won	integer	,
+Batting_Status	varchar(3)	,
+Bowling_Status	varchar(3)	,
+Player_Captain	varchar(40)	,
+Opposit_captain	varchar(40)	,
+Player_keeper	varchar(40)	,
+Opposit_keeper	varchar(40)	
+)
+
+create or replace table "Match"
+(
+Match_SK	integer	,
+match_id	integer	,
+Team1	varchar(30)	,
+Team2	varchar(30)	,
+match_date	date	,
+Season_Year	integer	,
+Venue_Name	varchar(100)	,
+City_Name	varchar(30)	,
+Country_Name	varchar(30)	,
+Toss_Winner	varchar(30)	,
+match_winner	varchar(30)	,
+Toss_Name	varchar(20)	,
+Win_Type	varchar(25)	,
+Outcome_Type	varchar(20)	,
+ManOfMach	varchar(20)	,
+Win_Margin	integer	,
+Country_id	integer
+)
+
+create or replace table "Ball_by_ball"
+(
+MatcH_id	bigint	,
+Over_id	integer	,
+Ball_id	integer	,
+Innings_No	integer	,
+Team_Batting	varchar(40)	,
+Team_Bowling	varchar(40)	,
+Striker_Batting_Position	integer	,
+Extra_Type	varchar(15)	,
+Runs_Scored	integer	,
+Extra_runs	integer	,
+Wides	integer	,
+Legbyes	integer	,
+Byes	integer	,
+Noballs	integer	,
+Penalty	integer	,
+Bowler_Extras	integer	,
+Out_type	varchar(30)	,
+Caught	integer	,
+Bowled	integer	,
+Run_out	integer	,
+LBW	integer	,
+Retired_hurt	integer	,
+Stumped	integer	,
+caught_and_bowled	integer	,
+hit_wicket	integer	,
+ObstructingFeild	integer	,
+Bowler_Wicket	integer	,
+Match_Date	date	,
+Season	integer	,
+Striker	integer	,
+Non_Striker	integer	,
+Bowler	integer	,
+Player_Out	varchar(10)	,
+Fielders	varchar(10)	,
+Striker_match_SK	integer	,
+StrikerSK	integer	,
+NonStriker_match_SK	integer	,
+NONStriker_SK	integer	,
+Fielder_match_SK	integer	,
+Fielder_SK	integer	,
+Bowler_match_SK	integer	,
+BOWLER_SK	integer	,
+PlayerOut_match_SK	integer	,
+BattingTeam_SK	integer	,
+BowlingTeam_SK	integer	,
+Keeper_Catch	integer	,
+Player_out_sk	integer	,
+MatchDateSK	bigint	
+)
+
+
+
+create or replace table "Team" (
+"Team_SK"	varchar(10),
+"Team_Id"	varchar(10),
+"Team_Name" varchar(40))
+
+  
+/**********End creation of source tables ***************************************/
+
+
+
+/*********Insertion of data into  source tables ***************************************/
+
+
+copy into "Player"
+from 's3://ipl-data-analytics/Player.csv'
+STORAGE_INTEGRATION =s3_int
+FILE_FORMAT=(FORMAT_NAME=mycsvformat)
+
+
+
+copy into "Player_match"
+from 's3://ipl-data-analytics/Player_match.csv'
+STORAGE_INTEGRATION =s3_int
+FILE_FORMAT=(FORMAT_NAME=mycsvformat)
+
+
+
+copy into "Match"
+from 's3://ipl-data-analytics/Match.csv'
+STORAGE_INTEGRATION =s3_int
+FILE_FORMAT=(FORMAT_NAME=mycsvformat)
+
+
+copy into "Ball_by_ball"
+from 's3://ipl-data-analytics/Ball_By_Ball.csv'
+STORAGE_INTEGRATION =s3_int
+FILE_FORMAT=(FORMAT_NAME=mycsvformat)
+
+
+copy into "Team"
+from 's3://ipl-data-analytics/Team.csv'
+STORAGE_INTEGRATION =s3_int
+FILE_FORMAT=(FORMAT_NAME=mycsvformat)
+
+
+/*********End Insertion of data into source tables ***************************************/
+
+
+/************creation of time travel ****************************************/
+
+CREATE TABLE PLAYER_TIME_TRAVEL
+AS SELECT * FROM "Player"
+
+ALTER TABLE PLAYER_TIME_TRAVEL SET DATA_RETENTION_TIME_IN_DAYS=2;
+
+delete from PLAYER_TIME_TRAVEL
+
+SELECT * FROM PLAYER_TIME_TRAVEL AT(OFFSET => -60*1);
+drop table PLAYER_TIME_TRAVEL
+
+undrop table PLAYER_TIME_TRAVEL
+
+SELECT * FROM PLAYER_TIME_TRAVEL
+
+/************End creation of time travel ****************************************/
+
+
+/************creating clone*************/
+
+CREATE TABLE "BALL_BY_BALL_CLONE"
+AS SELECT * FROM "Ball_by_ball"
+select * from "BALL_BY_BALL_CLONE"
+
+
+/************End creating clone*************/
+
+/***********setting up of snowpipe for file event trigger load **************/
+
+create schema stg_zone
+CREATE STAGE my_s3_stage_snowpipe
+  STORAGE_INTEGRATION = s3_int_snowpipe
+  URL = 's3://ipl-data-analytics/snowpipe/'
+  FILE_FORMAT = mycsvformat;
+
+CREATE or replace STORAGE INTEGRATION s3_int_snowpipe
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = 'S3'
+  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::095303341690:role/s3_access_snowflake'
+  ENABLED = TRUE
+  STORAGE_ALLOWED_LOCATIONS = ('s3://ipl-data-analytics/snowpipe/');
+
+CREATE OR REPLACE FILE FORMAT mycsvformat
+   TYPE = 'CSV'
+   FIELD_DELIMITER = ','
+    record_delimiter = '\n'
+   SKIP_HEADER = 1
+   encoding = 'iso-8859-1'
+   null_if = ('NULL', 'null')
+  empty_field_as_null = true
+    FIELD_OPTIONALLY_ENCLOSED_BY = '0x22';
+
+CREATE or replace TABLE team_snowpipe
+AS SELECT * FROM "Team"
+
+SELECT *  from team_snowpipe
+select SYSTEM$PIPE_STATUS('snowpipe')
+
+creATE or replace pipe snowpipe auto_ingest=True  
+as copy into team_snowpipe
+from @my_s3_stage_snowpipe
+file_format=(type='CSV')
+
+
+
+
+
+select count(*) from team_snowpipe
+
+
+
+show pipes
+LIST@my_s3_stage_snowpipe
+
+
+/***********setting up of snowpipe for file event trigger load **************/
+
+
+select * from "Team"
+
+PLAYER_SK	Player_Id	Player_Name	DOB	Batting_hand	Bowling_skill	Country_Name
+
+create table "Player" (
+PLAYER_SK integer,
+Player_Id integer,
+Player_Name varchar(30),
+DOB date,
+Batting_hand varchar(30),
+Bowling_skill varchar(40),
+Country_Name varchar(40) )
+
+create table "Player_match" (
+Player_match_SK	integer	,
+PlayerMatch_key	integer	,
+Match_Id	bigint	,
+Player_Id	integer	,
+Player_Name	varchar(30)	,
+DOB	date	,
+Batting_hand	varchar(40)	,
+Bowling_skill	varchar(40)	,
+Country_Name	varchar(40)	,
+Role_Desc	varchar(40)	,
+Player_team	varchar(40)	,
+Opposit_Team	varchar(40)	,
+Season_year	integer	,
+is_manofThematch	varchar(3)	,
+Age_As_on_match	integer	,
+IsPlayers_Team_won	integer	,
+Batting_Status	varchar(3)	,
+Bowling_Status	varchar(3)	,
+Player_Captain	varchar(40)	,
+Opposit_captain	varchar(40)	,
+Player_keeper	varchar(40)	,
+Opposit_keeper	varchar(40)	
+)
+
+copy into "Player"
+from 's3://ipl-data-analytics/Player.csv'
+STORAGE_INTEGRATION =s3_int
+FILE_FORMAT=(FORMAT_NAME=mycsvformat)
+
+select * from  "Player_match"
+
+copy into "Player_match"
+from 's3://ipl-data-analytics/Player_match.csv'
+STORAGE_INTEGRATION =s3_int
+FILE_FORMAT=(FORMAT_NAME=mycsvformat)
+
+create or replace table "Match"
+(
+Match_SK	integer	,
+match_id	integer	,
+Team1	varchar(30)	,
+Team2	varchar(30)	,
+match_date	date	,
+Season_Year	integer	,
+Venue_Name	varchar(100)	,
+City_Name	varchar(30)	,
+Country_Name	varchar(30)	,
+Toss_Winner	varchar(30)	,
+match_winner	varchar(30)	,
+Toss_Name	varchar(20)	,
+Win_Type	varchar(25)	,
+Outcome_Type	varchar(20)	,
+ManOfMach	varchar(20)	,
+Win_Margin	integer	,
+Country_id	integer
+)
+
+copy into "Match"
+from 's3://ipl-data-analytics/Match.csv'
+STORAGE_INTEGRATION =s3_int
+FILE_FORMAT=(FORMAT_NAME=mycsvformat)
+
+select * from "Match"
+
+create or replace table "Ball_by_ball"
+(
+MatcH_id	bigint	,
+Over_id	integer	,
+Ball_id	integer	,
+Innings_No	integer	,
+Team_Batting	varchar(40)	,
+Team_Bowling	varchar(40)	,
+Striker_Batting_Position	integer	,
+Extra_Type	varchar(15)	,
+Runs_Scored	integer	,
+Extra_runs	integer	,
+Wides	integer	,
+Legbyes	integer	,
+Byes	integer	,
+Noballs	integer	,
+Penalty	integer	,
+Bowler_Extras	integer	,
+Out_type	varchar(30)	,
+Caught	integer	,
+Bowled	integer	,
+Run_out	integer	,
+LBW	integer	,
+Retired_hurt	integer	,
+Stumped	integer	,
+caught_and_bowled	integer	,
+hit_wicket	integer	,
+ObstructingFeild	integer	,
+Bowler_Wicket	integer	,
+Match_Date	date	,
+Season	integer	,
+Striker	integer	,
+Non_Striker	integer	,
+Bowler	integer	,
+Player_Out	varchar(10)	,
+Fielders	varchar(10)	,
+Striker_match_SK	integer	,
+StrikerSK	integer	,
+NonStriker_match_SK	integer	,
+NONStriker_SK	integer	,
+Fielder_match_SK	integer	,
+Fielder_SK	integer	,
+Bowler_match_SK	integer	,
+BOWLER_SK	integer	,
+PlayerOut_match_SK	integer	,
+BattingTeam_SK	integer	,
+BowlingTeam_SK	integer	,
+Keeper_Catch	integer	,
+Player_out_sk	integer	,
+MatchDateSK	bigint	
+)
+
+copy into "Ball_by_ball"
+from 's3://ipl-data-analytics/Ball_By_Ball.csv'
+STORAGE_INTEGRATION =s3_int
+FILE_FORMAT=(FORMAT_NAME=mycsvformat)
+
+select * from "Ball_by_ball"
+
+select count(*) from "Match" a
+inner join "Player_match" b
+on a.match_id=b.match_id
+
+select count(*),match_id
+from "Ball_by_ball" ball 
+inner join "Player_Match" pl
+on ball.match_id=pl.match_id
+where season='2017'
+and runs_scored in (4,6)
+group by match_id
+
+select *  from "Ball_by_ball" where match_id='598028' and RUNS_SCORED in (4,6)
+
+select * from  "Player_match" where match_id='598028'
+
+select count(*),pm.player_name
+ from "Ball_by_ball" ball
+ inner join "Player_match" pm
+ on ball.match_id=pm.match_id
+ and ball.striker=pm.player_id
+ where runs_scored in (4,6)
+ and season = 2017
+ group by pm.player_name
+ order by 1 desc
+
+ select pm.match_id,player_name,economy
+ from (select match_id,bowler,season,sum(runs_per_over)/count(over_id) economy
+ from(select match_id,BOWLER,OVER_ID,season,sum(runs_scored) runs_per_over from "Ball_by_ball" 
+ group by 1,2,3,4) group by 1,2,3) ball
+ inner join "Player_match" pm
+ on ball.match_id=pm.match_id
+ and ball.BOWLER=pm.player_id
+
+
+ 
+ select count(*),pm.player_name
+ from "Ball_by_ball" ball
+ inner join "Player_match" pm
+ on ball.match_id=pm.match_id
+ and ball.striker=pm.player_id
+ where runs_scored in (4,6)
+ and season = 2017
+ group by pm.player_name
+ order by 1 desc
+
+select pm.match_id,player_name,economy
+ from (select match_id,bowler,season,sum(runs_per_over)/count(over_id) economy
+ from(select match_id,BOWLER,OVER_ID,season,sum(runs_scored) runs_per_over from "Ball_by_ball" 
+ where match_id='598028'
+ group by 1,2,3,4) group by 1,2,3) ball
+ inner join "Player_match" pm
+ on ball.match_id=pm.match_id
+ and ball.BOWLER=pm.player_id
+
+ 
+ select player_name,Crucial_Wicket_taking_ability
+ from (select match_id,bowler,wicket_count/no_of_innings_played :: float Crucial_Wicket_taking_ability
+ from(select match_id,BOWLER,count_if(Bowler_Wicket=1) wicket_count,count(distinct Innings_No) no_of_innings_played  from "Ball_by_ball" 
+-- where match_id='829720'
+ --and player_name='Imran Tahir'
+group by 1,2
+  having wicket_count>=4
+  )) ball
+  inner join "Player_match" pm
+ on ball.match_id=pm.match_id
+ and ball.BOWLER=pm.player_id
+
+WHERE  player_name='Imran Tahir'
+
+
+
+
+SELECT PLAYER_NAME,TOTAL_MATCH_PLAYED,WICKET_TAKER_HAUL FROM
+(SELECT PLAYER_ID,PLAYER_NAME,COUNT(*) TOTAL_MATCH_PLAYED FROM "Player_match" 
+GROUP BY 1,2)PI
+INNER JOIN 
+(SELECT BOWLER,COUNT(DISTINCT MATCH_ID) WICKET_TAKER_HAUL FROM(
+SELECT MATCH_ID,BOWLER from "Ball_by_ball"  GROUP BY 1,2
+HAVING SUM(BOWLER_WICKET)>=4) GROUP BY 1) MI
+ON PI.PLAYER_ID=MI.BOWLER
+ORDER BY 3 DESC;
+
+
+
+SELECT PLAYER_NAME,VENUE_NAME,RUN_SCORED FROM
+(select MATCH_ID,STRIKER,SUM(RUNS_SCORED) RUN_SCORED from "Ball_by_ball"
+GROUP BY 1,2
+) BBB
+INNER JOIN "Match" M
+ON BBB.MATCH_ID = M.MATCH_ID
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.STRIKER
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY STRIKER ORDER BY RUN_SCORED DESC) =1;
+
+
+
+SELECT PLAYER_NAME,WICKET_TAKEN,BBB.SEASON FROM
+(select Bowler
+,SEASON,SUM(Bowler_Wicket
+) WICKET_TAKEN from "Ball_by_ball"
+GROUP BY 1,2
+) BBB
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.Bowler
+
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY BBB.SEASON ORDER BY WICKET_TAKEN DESC) =1
+ORDER BY 3 DESC;
+
+SELECT PLAYER_NAME,RUN_SCORED,BBB.BALLS_BOWLED,BBB.SEASON,RUN_SCORED/BBB.BALLS_BOWLED STRIKE_RATIO FROM
+(select STRIKER,SEASON,SUM(RUNS_SCORED) RUN_SCORED,COUNT(BALL_ID) BALLS_BOWLED from "Ball_by_ball"
+--WHERE 
+--AND
+GROUP BY 1,2
+) BBB
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.STRIKER
+WHERE RUN_SCORED>=200
+GROUP BY PLAYER_NAME,RUN_SCORED,BBB.SEASON,BALLS_BOWLED
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY BBB.SEASON ORDER BY STRIKE_RATIO DESC) =1
+ORDER BY 4 DESC;
+
+
+SELECT PLAYER_NAME,SEASON,NO_OF_CATCHES FROM
+(select SEASON,FIELDERS,COUNT(CAUGHT) NO_OF_CATCHES from "Ball_by_ball"
+GROUP BY 1,2
+) BBB
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.FIELDERS
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY SEASON ORDER BY NO_OF_CATCHES DESC) =1
+ORDER BY 2 DESC;
+
+
+SELECT PLAYER_NAME,SEASON,RUN_SCORED FROM
+(select MATCH_ID,STRIKER,SUM(RUNS_SCORED) RUN_SCORED from "Ball_by_ball"
+GROUP BY 1,2
+) BBB
+INNER JOIN "Match" M
+ON BBB.MATCH_ID = M.MATCH_ID
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.STRIKER
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY SEASON ORDER BY RUN_SCORED DESC) =1;
+
+
+
+SELECT PLAYER_NAME, SEASON, CENTURY FROM
+(SELECT STRIKER, SEASON, COUNT(RUN_SCORED) CENTURY FROM
+(select MATCH_ID,STRIKER,SEASON,SUM(RUNS_SCORED) RUN_SCORED from "Ball_by_ball"
+GROUP BY 1,2,3
+HAVING RUN_SCORED>=100
+) A GROUP BY 1,2) BBB
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.STRIKER
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY SEASON ORDER BY CENTURY DESC) =1;
+
+SELECT RS.SEASON, PM.PLAYER_NAME,(WIDES +LEG_BYES +BYES + NOBALLS )EXTRA_RUNS
+FROM 
+(select SEASON,BOWLER ,SUM(Wides) WIDES,SUM(Legbyes) LEG_BYES,SUM(BYES) BYES,SUM(NOBALLS) NOBALLS from "Ball_by_ball"
+ GROUP BY 1,2)RS
+INNER JOIN "Player" PM
+ON PM.PLAYER_ID=RS.BOWLER
+ORDER BY 1 ASC,2 DESC
+
+SELECT RS.SEASON, PM.PLAYER_NAME,SUM(WIDES +LEG_BYES +BYES + NOBALLS )EXTRA_RUNS
+FROM 
+(select SEASON,BOWLER ,SUM(Wides) WIDES,SUM(Legbyes) LEG_BYES,SUM(BYES) BYES,SUM(NOBALLS) NOBALLS from "Ball_by_ball"
+WHERE SEASON=2009
+AND BOWLER=15
+ GROUP BY ALL)RS
+INNER JOIN "Player" PM
+ON PM.PLAYER_ID=RS.BOWLER
+GROUP BY ALL
+ORDER BY 1 ASC,2 DESC
+
+CREATE TABLE PLAYER_TIME_TRAVEL
+AS SELECT * FROM "Player"
+
+ALTER TABLE PLAYER_TIME_TRAVEL SET DATA_RETENTION_TIME_IN_DAYS=2;
+
+delete from PLAYER_TIME_TRAVEL
+
+SELECT * FROM PLAYER_TIME_TRAVEL AT(OFFSET => -60*1);
+drop table PLAYER_TIME_TRAVEL
+
+
+
+undrop table PLAYER_TIME_TRAVEL
+
+SELECT * FROM PLAYER_TIME_TRAVEL
+
+CREATE TABLE "BALL_BY_BALL_CLONE"
+AS SELECT * FROM "Ball_by_ball"
+select * from "BALL_BY_BALL_CLONE"
+
+
+
+select * from
+(select a.Match_SK	,a.match_id	,a.Team1,	a.Team2,	a.match_date,	a.Season_Year,	a.Venue_Name,	a.City_Name	,a.Country_Name,	a.Toss_Winner,	a.match_winner,	a.Toss_Name,	a.Win_Type,	a.Outcome_Type
+ from "Match" a where Team1 in('Royal Challengers Bangalore','Mumbai Indians')) a
+cross join (select Match_SK	,match_id	,Team1,	Team2,	match_date,	Season_Year,	Venue_Name,	City_Name	,Country_Name,	Toss_Winner,	match_winner,	Toss_Name,	Win_Type,	Outcome_Type
+ from "Match" where Team1 in('Royal Challengers Bangalore','Mumbai Indians')) v
+cross join (select Match_SK	,match_id	,Team1,	Team2,	match_date,	Season_Year,	Venue_Name,	City_Name	,Country_Name,	Toss_Winner,	match_winner,	Toss_Name,	Win_Type,	Outcome_Type
+ from "Match" where Team1 in('Royal Challengers Bangalore','Mumbai Indians')) c
+
+metadata cache
+
+
+ select count(*) from
+(select a.Match_SK	,a.match_id	,a.Team1,	a.Team2,	a.match_date,	a.Season_Year,	a.Venue_Name,	a.City_Name	,a.Country_Name,	a.Toss_Winner,	a.match_winner,	a.Toss_Name,	a.Win_Type,	a.Outcome_Type
+ from "Match" a where Team1 in('Royal Challengers Bangalore','Mumbai Indians')) a
+cross join (select Match_SK	,match_id	,Team1,	Team2,	match_date,	Season_Year,	Venue_Name,	City_Name	,Country_Name,	Toss_Winner,	match_winner,	Toss_Name,	Win_Type,	Outcome_Type
+ from "Match" where Team1 in('Royal Challengers Bangalore','Mumbai Indians')) v
+cross join (select Match_SK	,match_id	,Team1,	Team2,	match_date,	Season_Year,	Venue_Name,	City_Name	,Country_Name,	Toss_Winner,	match_winner,	Toss_Name,	Win_Type,	Outcome_Type
+ from "Match" where Team1 in('Royal Challengers Bangalore','Mumbai Indians')) c
+
+
+
+/**************data analytics queries ******************/
+
+batsman with most boundaries(fours and six)
+
+select count(*) cn,pm.player_name,season
+ from "Ball_by_ball" ball
+ inner join "Player_match" pm
+ on ball.match_id=pm.match_id
+ and ball.striker=pm.player_id
+ where 
+ --season='2017'
+ --and
+ runs_scored in (4,6)
+ group by pm.player_name,season
+ QUALIFY ROW_NUMBER () OVER(PARTITION  BY season ORDER BY cn DESC) =1
+
+
+average runs given by bowler in a over
+
+select player_name, season, economy
+ from (select bowler,season,sum(runs_per_over)/count(over_id) economy
+ from(select match_id,BOWLER,OVER_ID,season,sum(runs_scored) runs_per_over from "Ball_by_ball" 
+ group by 1,2,3,4 ) 
+ group by 1,2
+ having count(over_id) > 20
+ ) ball
+
+
+II. Wicket taking ability: No. of balls bowled / Wicket taken.
+
+select pm.match_id,player_name,Wicket_taking_ability
+ from (select match_id,bowler,season,no_of_balls_bowled/wicket_count :: float Wicket_taking_ability
+ from(select match_id,BOWLER,season,count_if(Bowler_Wicket=1) wicket_count,count(ball_id) no_of_balls_bowled  from "Ball_by_ball" 
+  --where match_id='598028'
+  group by 1,2,3
+  having wicket_count<>0
+  )) ball
+  inner join "Player_match" pm
+ on ball.match_id=pm.match_id
+ and ball.BOWLER=pm.player_id
+
+IV. Crucial Wicket Taking Ability: No. of times four or five-wicket taken / No. of inning played
+
+select top 5 player_name,Crucial_Wicket_taking_ability
+ from (select bowler,wicket_count/no_of_innings_played :: float Crucial_Wicket_taking_ability
+ from(select match_id,BOWLER,count_if(Bowler_Wicket=1) wicket_count,count(distinct Innings_No) no_of_innings_played  from "Ball_by_ball" 
+-- where match_id='829720'
+ --and player_name='Imran Tahir'
+group by 1,2
+  having wicket_count>=4
+  )) ball
+  inner join "Player" pm
+
+What Stadium  does batsman performs better?”
+
+SELECT PLAYER_NAME,VENUE_NAME,RUN_SCORED FROM
+(select MATCH_ID,STRIKER,SUM(RUNS_SCORED) RUN_SCORED from "Ball_by_ball"
+GROUP BY 1,2
+) BBB
+INNER JOIN "Match" M
+ON BBB.MATCH_ID = M.MATCH_ID
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.STRIKER
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY STRIKER ORDER BY RUN_SCORED DESC) =1;
+
+
+The Top Batsman in the IPL
+
+SELECT PLAYER_NAME,RUN_SCORED,BBB.SEASON FROM
+(select STRIKER,SEASON,SUM(RUNS_SCORED) RUN_SCORED from "Ball_by_ball"
+GROUP BY 1,2
+) BBB
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.STRIKER
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY BBB.SEASON ORDER BY RUN_SCORED DESC) =1
+ORDER BY 3 DESC;
+
+The Top BOWLER in the IPL
+
+SELECT PLAYER_NAME,WICKET_TAKEN,BBB.SEASON FROM
+(select Bowler
+,SEASON,SUM(Bowler_Wicket
+) WICKET_TAKEN from "Ball_by_ball"
+GROUP BY 1,2
+) BBB
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.Bowler
+
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY BBB.SEASON ORDER BY WICKET_TAKEN DESC) =1
+ORDER BY 3 DESC;
+
+
+which is the batsman with highest strike rate SEASON WISE
+
+SELECT PLAYER_NAME,RUN_SCORED,BBB.BALLS_BOWLED,BBB.SEASON,RUN_SCORED/BBB.BALLS_BOWLED STRIKE_RATIO FROM
+(select STRIKER,SEASON,SUM(RUNS_SCORED) RUN_SCORED,COUNT(BALL_ID) BALLS_BOWLED from "Ball_by_ball"
+#NAME?
+#NAME?
+GROUP BY 1,2
+) BBB
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.STRIKER
+WHERE RUN_SCORED>=200
+GROUP BY PLAYER_NAME,RUN_SCORED,BBB.SEASON,BALLS_BOWLED
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY BBB.SEASON ORDER BY STRIKE_RATIO DESC) =1
+ORDER BY 4 DESC;
+
+
+WHICH FIELDER TOOK MAXIMUM CATCHES SEASON WISE
+
+SELECT PLAYER_NAME, SEASON, CENTURY FROM
+(SELECT STRIKER, SEASON, COUNT(RUN_SCORED) CENTURY FROM
+(select MATCH_ID,STRIKER,SEASON,SUM(RUNS_SCORED) RUN_SCORED from "Ball_by_ball"
+GROUP BY 1,2,3
+HAVING RUN_SCORED>=100
+) A GROUP BY 1,2) BBB
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.STRIKER
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY SEASON ORDER BY CENTURY DESC) =1;
+
+avergage   of each batsman
+
+SELECT PM.PLAYER_NAME, RUN_SCORED /NO.TOTAL_MATCH_NO AVG_RUNS
+FROM 
+(select STRIKER ,SUM(RUNS_SCORED) RUN_SCORED from "Ball_by_ball"
+ GROUP BY 1)RS
+INNER JOIN 
+(select STRIKER,COUNT(DISTINCT MATCH_ID) TOTAL_MATCH_NO  from "Ball_by_ball" WHERE OUT_TYPE<>'Not Applicable' 
+GROUP BY 1) NO
+ON RS.STRIKER = NO.STRIKER
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=RS.STRIKER
+GROUP BY ALL
+ORDER BY 2 DESC
+
+avergage   of each bowler
+
+SELECT PM.PLAYER_NAME, WICKET_TAKEN /NO.TOTAL_MATCH_NO AVG_WICKETS
+FROM 
+(select BOWLER ,SUM(BOWLER_WICKET) WICKET_TAKEN from "Ball_by_ball"
+ GROUP BY 1)RS
+INNER JOIN 
+(select BOWLER,COUNT(DISTINCT MATCH_ID) TOTAL_MATCH_NO  from "Ball_by_ball" 
+GROUP BY 1) NO
+ON RS.BOWLER = NO.BOWLER
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=RS.BOWLER
+GROUP BY ALL
+ORDER BY 2 DESC
+
+NO OF EXTRA RUNS GIVEN BOWLER
+
+SELECT RS.SEASON, PM.PLAYER_NAME,SUM(WIDES +LEG_BYES +BYES + NOBALLS )EXTRA_RUNS
+FROM 
+(select SEASON,BOWLER ,SUM(Wides) WIDES,SUM(Legbyes) LEG_BYES,SUM(BYES) BYES,SUM(NOBALLS) NOBALLS from "Ball_by_ball"
+WHERE SEASON=2009
+AND BOWLER=15
+ GROUP BY ALL)RS
+INNER JOIN "Player" PM
+ON PM.PLAYER_ID=RS.BOWLER
+GROUP BY ALL
+ORDER BY 1 ASC,2 DESC
+
+/**************data analytics queries ******************/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
