@@ -277,7 +277,6 @@ LIST@my_s3_stage_snowpipe
 
 select * from "Team"
 
-PLAYER_SK	Player_Id	Player_Name	DOB	Batting_hand	Bowling_skill	Country_Name
 
 create table "Player" (
 PLAYER_SK integer,
@@ -410,181 +409,9 @@ from 's3://ipl-data-analytics/Ball_By_Ball.csv'
 STORAGE_INTEGRATION =s3_int
 FILE_FORMAT=(FORMAT_NAME=mycsvformat)
 
-select * from "Ball_by_ball"
-
-select count(*) from "Match" a
-inner join "Player_match" b
-on a.match_id=b.match_id
-
-select count(*),match_id
-from "Ball_by_ball" ball 
-inner join "Player_Match" pl
-on ball.match_id=pl.match_id
-where season='2017'
-and runs_scored in (4,6)
-group by match_id
-
-select *  from "Ball_by_ball" where match_id='598028' and RUNS_SCORED in (4,6)
-
-select * from  "Player_match" where match_id='598028'
-
-select count(*),pm.player_name
- from "Ball_by_ball" ball
- inner join "Player_match" pm
- on ball.match_id=pm.match_id
- and ball.striker=pm.player_id
- where runs_scored in (4,6)
- and season = 2017
- group by pm.player_name
- order by 1 desc
-
- select pm.match_id,player_name,economy
- from (select match_id,bowler,season,sum(runs_per_over)/count(over_id) economy
- from(select match_id,BOWLER,OVER_ID,season,sum(runs_scored) runs_per_over from "Ball_by_ball" 
- group by 1,2,3,4) group by 1,2,3) ball
- inner join "Player_match" pm
- on ball.match_id=pm.match_id
- and ball.BOWLER=pm.player_id
-
-
- 
- select count(*),pm.player_name
- from "Ball_by_ball" ball
- inner join "Player_match" pm
- on ball.match_id=pm.match_id
- and ball.striker=pm.player_id
- where runs_scored in (4,6)
- and season = 2017
- group by pm.player_name
- order by 1 desc
-
-select pm.match_id,player_name,economy
- from (select match_id,bowler,season,sum(runs_per_over)/count(over_id) economy
- from(select match_id,BOWLER,OVER_ID,season,sum(runs_scored) runs_per_over from "Ball_by_ball" 
- where match_id='598028'
- group by 1,2,3,4) group by 1,2,3) ball
- inner join "Player_match" pm
- on ball.match_id=pm.match_id
- and ball.BOWLER=pm.player_id
-
- 
- select player_name,Crucial_Wicket_taking_ability
- from (select match_id,bowler,wicket_count/no_of_innings_played :: float Crucial_Wicket_taking_ability
- from(select match_id,BOWLER,count_if(Bowler_Wicket=1) wicket_count,count(distinct Innings_No) no_of_innings_played  from "Ball_by_ball" 
--- where match_id='829720'
- --and player_name='Imran Tahir'
-group by 1,2
-  having wicket_count>=4
-  )) ball
-  inner join "Player_match" pm
- on ball.match_id=pm.match_id
- and ball.BOWLER=pm.player_id
-
-WHERE  player_name='Imran Tahir'
 
 
 
-
-SELECT PLAYER_NAME,TOTAL_MATCH_PLAYED,WICKET_TAKER_HAUL FROM
-(SELECT PLAYER_ID,PLAYER_NAME,COUNT(*) TOTAL_MATCH_PLAYED FROM "Player_match" 
-GROUP BY 1,2)PI
-INNER JOIN 
-(SELECT BOWLER,COUNT(DISTINCT MATCH_ID) WICKET_TAKER_HAUL FROM(
-SELECT MATCH_ID,BOWLER from "Ball_by_ball"  GROUP BY 1,2
-HAVING SUM(BOWLER_WICKET)>=4) GROUP BY 1) MI
-ON PI.PLAYER_ID=MI.BOWLER
-ORDER BY 3 DESC;
-
-
-
-SELECT PLAYER_NAME,VENUE_NAME,RUN_SCORED FROM
-(select MATCH_ID,STRIKER,SUM(RUNS_SCORED) RUN_SCORED from "Ball_by_ball"
-GROUP BY 1,2
-) BBB
-INNER JOIN "Match" M
-ON BBB.MATCH_ID = M.MATCH_ID
-INNER JOIN "Player_match" PM
-ON PM.PLAYER_ID=BBB.STRIKER
-QUALIFY ROW_NUMBER () OVER(PARTITION  BY STRIKER ORDER BY RUN_SCORED DESC) =1;
-
-
-
-SELECT PLAYER_NAME,WICKET_TAKEN,BBB.SEASON FROM
-(select Bowler
-,SEASON,SUM(Bowler_Wicket
-) WICKET_TAKEN from "Ball_by_ball"
-GROUP BY 1,2
-) BBB
-INNER JOIN "Player_match" PM
-ON PM.PLAYER_ID=BBB.Bowler
-
-QUALIFY ROW_NUMBER () OVER(PARTITION  BY BBB.SEASON ORDER BY WICKET_TAKEN DESC) =1
-ORDER BY 3 DESC;
-
-SELECT PLAYER_NAME,RUN_SCORED,BBB.BALLS_BOWLED,BBB.SEASON,RUN_SCORED/BBB.BALLS_BOWLED STRIKE_RATIO FROM
-(select STRIKER,SEASON,SUM(RUNS_SCORED) RUN_SCORED,COUNT(BALL_ID) BALLS_BOWLED from "Ball_by_ball"
---WHERE 
---AND
-GROUP BY 1,2
-) BBB
-INNER JOIN "Player_match" PM
-ON PM.PLAYER_ID=BBB.STRIKER
-WHERE RUN_SCORED>=200
-GROUP BY PLAYER_NAME,RUN_SCORED,BBB.SEASON,BALLS_BOWLED
-QUALIFY ROW_NUMBER () OVER(PARTITION  BY BBB.SEASON ORDER BY STRIKE_RATIO DESC) =1
-ORDER BY 4 DESC;
-
-
-SELECT PLAYER_NAME,SEASON,NO_OF_CATCHES FROM
-(select SEASON,FIELDERS,COUNT(CAUGHT) NO_OF_CATCHES from "Ball_by_ball"
-GROUP BY 1,2
-) BBB
-INNER JOIN "Player_match" PM
-ON PM.PLAYER_ID=BBB.FIELDERS
-QUALIFY ROW_NUMBER () OVER(PARTITION  BY SEASON ORDER BY NO_OF_CATCHES DESC) =1
-ORDER BY 2 DESC;
-
-
-SELECT PLAYER_NAME,SEASON,RUN_SCORED FROM
-(select MATCH_ID,STRIKER,SUM(RUNS_SCORED) RUN_SCORED from "Ball_by_ball"
-GROUP BY 1,2
-) BBB
-INNER JOIN "Match" M
-ON BBB.MATCH_ID = M.MATCH_ID
-INNER JOIN "Player_match" PM
-ON PM.PLAYER_ID=BBB.STRIKER
-QUALIFY ROW_NUMBER () OVER(PARTITION  BY SEASON ORDER BY RUN_SCORED DESC) =1;
-
-
-
-SELECT PLAYER_NAME, SEASON, CENTURY FROM
-(SELECT STRIKER, SEASON, COUNT(RUN_SCORED) CENTURY FROM
-(select MATCH_ID,STRIKER,SEASON,SUM(RUNS_SCORED) RUN_SCORED from "Ball_by_ball"
-GROUP BY 1,2,3
-HAVING RUN_SCORED>=100
-) A GROUP BY 1,2) BBB
-INNER JOIN "Player_match" PM
-ON PM.PLAYER_ID=BBB.STRIKER
-QUALIFY ROW_NUMBER () OVER(PARTITION  BY SEASON ORDER BY CENTURY DESC) =1;
-
-SELECT RS.SEASON, PM.PLAYER_NAME,(WIDES +LEG_BYES +BYES + NOBALLS )EXTRA_RUNS
-FROM 
-(select SEASON,BOWLER ,SUM(Wides) WIDES,SUM(Legbyes) LEG_BYES,SUM(BYES) BYES,SUM(NOBALLS) NOBALLS from "Ball_by_ball"
- GROUP BY 1,2)RS
-INNER JOIN "Player" PM
-ON PM.PLAYER_ID=RS.BOWLER
-ORDER BY 1 ASC,2 DESC
-
-SELECT RS.SEASON, PM.PLAYER_NAME,SUM(WIDES +LEG_BYES +BYES + NOBALLS )EXTRA_RUNS
-FROM 
-(select SEASON,BOWLER ,SUM(Wides) WIDES,SUM(Legbyes) LEG_BYES,SUM(BYES) BYES,SUM(NOBALLS) NOBALLS from "Ball_by_ball"
-WHERE SEASON=2009
-AND BOWLER=15
- GROUP BY ALL)RS
-INNER JOIN "Player" PM
-ON PM.PLAYER_ID=RS.BOWLER
-GROUP BY ALL
-ORDER BY 1 ASC,2 DESC
 
 CREATE TABLE PLAYER_TIME_TRAVEL
 AS SELECT * FROM "Player"
@@ -631,6 +458,7 @@ cross join (select Match_SK	,match_id	,Team1,	Team2,	match_date,	Season_Year,	Ve
 
 /**************data analytics queries ******************/
 
+---------------------------------------------------------
 batsman with most boundaries(fours and six)
 
 select count(*) cn,pm.player_name,season
@@ -645,6 +473,7 @@ select count(*) cn,pm.player_name,season
  group by pm.player_name,season
  QUALIFY ROW_NUMBER () OVER(PARTITION  BY season ORDER BY cn DESC) =1
 
+------------------------------------------------------------------
 
 average runs given by bowler in a over
 
@@ -656,8 +485,9 @@ select player_name, season, economy
  having count(over_id) > 20
  ) ball
 
+-----------------------------------------------------------------------
 
-II. Wicket taking ability: No. of balls bowled / Wicket taken.
+Wicket taking ability: No. of balls bowled / Wicket taken.
 
 select pm.match_id,player_name,Wicket_taking_ability
  from (select match_id,bowler,season,no_of_balls_bowled/wicket_count :: float Wicket_taking_ability
@@ -670,7 +500,9 @@ select pm.match_id,player_name,Wicket_taking_ability
  on ball.match_id=pm.match_id
  and ball.BOWLER=pm.player_id
 
-IV. Crucial Wicket Taking Ability: No. of times four or five-wicket taken / No. of inning played
+-----------------------------------------------------------------------
+
+Crucial Wicket Taking Ability: No. of times four or five-wicket taken / No. of inning played
 
 select top 5 player_name,Crucial_Wicket_taking_ability
  from (select bowler,wicket_count/no_of_innings_played :: float Crucial_Wicket_taking_ability
@@ -682,6 +514,7 @@ group by 1,2
   )) ball
   inner join "Player" pm
 
+-------------------------------------------------------------------------
 What Stadium  does batsman performs better?”
 
 SELECT PLAYER_NAME,VENUE_NAME,RUN_SCORED FROM
@@ -694,6 +527,7 @@ INNER JOIN "Player_match" PM
 ON PM.PLAYER_ID=BBB.STRIKER
 QUALIFY ROW_NUMBER () OVER(PARTITION  BY STRIKER ORDER BY RUN_SCORED DESC) =1;
 
+----------------------------------------------------------------------
 
 The Top Batsman in the IPL
 
@@ -706,6 +540,8 @@ ON PM.PLAYER_ID=BBB.STRIKER
 QUALIFY ROW_NUMBER () OVER(PARTITION  BY BBB.SEASON ORDER BY RUN_SCORED DESC) =1
 ORDER BY 3 DESC;
 
+----------------------------------------------------------------
+
 The Top BOWLER in the IPL
 
 SELECT PLAYER_NAME,WICKET_TAKEN,BBB.SEASON FROM
@@ -716,17 +552,14 @@ GROUP BY 1,2
 ) BBB
 INNER JOIN "Player_match" PM
 ON PM.PLAYER_ID=BBB.Bowler
-
 QUALIFY ROW_NUMBER () OVER(PARTITION  BY BBB.SEASON ORDER BY WICKET_TAKEN DESC) =1
 ORDER BY 3 DESC;
 
-
-which is the batsman with highest strike rate SEASON WISE
+--------------------------------------------------------------------
+Which is the batsman with highest strike rate SEASON WISE
 
 SELECT PLAYER_NAME,RUN_SCORED,BBB.BALLS_BOWLED,BBB.SEASON,RUN_SCORED/BBB.BALLS_BOWLED STRIKE_RATIO FROM
 (select STRIKER,SEASON,SUM(RUNS_SCORED) RUN_SCORED,COUNT(BALL_ID) BALLS_BOWLED from "Ball_by_ball"
-#NAME?
-#NAME?
 GROUP BY 1,2
 ) BBB
 INNER JOIN "Player_match" PM
@@ -736,8 +569,20 @@ GROUP BY PLAYER_NAME,RUN_SCORED,BBB.SEASON,BALLS_BOWLED
 QUALIFY ROW_NUMBER () OVER(PARTITION  BY BBB.SEASON ORDER BY STRIKE_RATIO DESC) =1
 ORDER BY 4 DESC;
 
-
+-----------------------------------------------------------
 WHICH FIELDER TOOK MAXIMUM CATCHES SEASON WISE
+
+SELECT PLAYER_NAME,SEASON,NO_OF_CATCHES FROM
+(select SEASON,FIELDERS,COUNT(CAUGHT) NO_OF_CATCHES from "Ball_by_ball"
+GROUP BY 1,2
+) BBB
+INNER JOIN "Player_match" PM
+ON PM.PLAYER_ID=BBB.FIELDERS
+QUALIFY ROW_NUMBER () OVER(PARTITION  BY SEASON ORDER BY NO_OF_CATCHES DESC) =1
+ORDER BY 2 DESC;
+
+------------------------------------------------------
+WHICH BATSMAN SCORED MAXIMUM CENTURIES SEASON WISE
 
 SELECT PLAYER_NAME, SEASON, CENTURY FROM
 (SELECT STRIKER, SEASON, COUNT(RUN_SCORED) CENTURY FROM
@@ -749,7 +594,8 @@ INNER JOIN "Player_match" PM
 ON PM.PLAYER_ID=BBB.STRIKER
 QUALIFY ROW_NUMBER () OVER(PARTITION  BY SEASON ORDER BY CENTURY DESC) =1;
 
-avergage   of each batsman
+--------------------------------------------------------
+Avergage of each batsman
 
 SELECT PM.PLAYER_NAME, RUN_SCORED /NO.TOTAL_MATCH_NO AVG_RUNS
 FROM 
@@ -764,7 +610,8 @@ ON PM.PLAYER_ID=RS.STRIKER
 GROUP BY ALL
 ORDER BY 2 DESC
 
-avergage   of each bowler
+------------------------------------------------
+Avergage of each bowler
 
 SELECT PM.PLAYER_NAME, WICKET_TAKEN /NO.TOTAL_MATCH_NO AVG_WICKETS
 FROM 
@@ -779,18 +626,22 @@ ON PM.PLAYER_ID=RS.BOWLER
 GROUP BY ALL
 ORDER BY 2 DESC
 
+---------------------------------------------
+
 NO OF EXTRA RUNS GIVEN BOWLER
 
 SELECT RS.SEASON, PM.PLAYER_NAME,SUM(WIDES +LEG_BYES +BYES + NOBALLS )EXTRA_RUNS
 FROM 
 (select SEASON,BOWLER ,SUM(Wides) WIDES,SUM(Legbyes) LEG_BYES,SUM(BYES) BYES,SUM(NOBALLS) NOBALLS from "Ball_by_ball"
-WHERE SEASON=2009
-AND BOWLER=15
+--WHERE SEASON=2009
+--AND BOWLER=15
  GROUP BY ALL)RS
 INNER JOIN "Player" PM
 ON PM.PLAYER_ID=RS.BOWLER
 GROUP BY ALL
 ORDER BY 1 ASC,2 DESC
+
+------------------------------------------------
 
 /**************data analytics queries ******************/
 
